@@ -1,0 +1,23 @@
+{
+  "name": "android-crawler",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "frida-java-bridge": "^5",
+    "frida-objc-bridge": "^7",
+    "frida-screenshot": "^3",
+    "lodash": "^4",
+    "macho": "^1"
+  },
+  "devDependencies": {
+    "@types/frida-gum": "^17.1.0",
+    "@types/node": "^16.4.8",
+    "frida-compile": "^10.0.0",
+    "eslint": "^7.32.0",
+    "typescript": "^4.3.5",
+    "@typescript-eslint/parser": "^1.13.0",
+    "@typescript-eslint/eslint-plugin": "^4.29.1",
+    "eslint-plugin-import": "^2.24.0",
+    "eslint-config-prettier": "^8.3.0"
+  }
+}
