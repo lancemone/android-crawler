@@ -2,6 +2,13 @@
   "name": "android-crawler",
   "version": "1.0.0",
   "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "frida-compile src/index.ts -o ../js/agent.js",
+    "watch": "frida-compile src/index.ts -o ../js/agent.js -w",
+    "eslint": "eslint src --ext .ts"
+  },
   "dependencies": {
     "frida-java-bridge": "^5",
     "frida-objc-bridge": "^7",

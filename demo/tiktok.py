@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 -------------------------------------------------
-   File Name：     agent
+   File Name：     tiktok
    Description :
    Author :       motao
    Mail :         tao.mo@transsnet.com
-   date：          2021/8/11
+   date：          2021/8/13
 -------------------------------------------------
 """
 __author__ = 'motao'
@@ -15,18 +15,16 @@ import os
 import sys
 
 import frida
-from frida.core import ScriptExports
-from state.connection import state_connection
 
-
-class Agent(object):
-    """ Class to manage the lifecycle of the Frida agent. """
-
-    def __init__(self):
-        self.agent_path = os.path.join(
+package_name = "com.ss.android.ugc.trill"
+device_serial = "FA79Y1A01745"
+agent_path = os.path.join(
             os.path.join(os.path.dirname(os.path.dirname(__file__)), "js"),
-            "tiktok-hook.js")
-        print('Agent path is: {path}'.format(path=self.agent_path))
+            "agent.js")
+
+
+class TiktokFeed(object):
+    def __init__(self):
         self.session = None
         self.script = None
         self.device = None
@@ -34,7 +32,15 @@ class Agent(object):
         self.resumed = False
 
     @staticmethod
+    def _get_device() -> frida.core.Device:
+        if device_serial:
+            device = frida.get_device(device_serial)
+            print('Using USB device `{n}`'.format(n=device.name))
+            return device
+
+    @staticmethod
     def on_message(message: dict, data):
+        print(str(message))
         payload: str = ''
         try:
             if message and 'payload' in message:
@@ -44,10 +50,13 @@ class Agent(object):
                     elif isinstance(message['payload'], str):
                         payload = message['payload']
                     else:
+                        print(type(message['payload']))
                         payload = str(message['payload'])
-            print(payload)
         except Exception as e:
             raise e
+
+    # def upload(self):
+    #     headers = {}
 
     @staticmethod
     def on_detach(message: str, crash):
@@ -76,31 +85,6 @@ class Agent(object):
             print('Failed to process an incoming message for a session detach signal: {0}'.format(e))
             raise e
 
-    @staticmethod
-    def _get_device() -> frida.core.Device:
-        if state_connection.get_comms_type() == state_connection.TYPE_USB:
-
-            if state_connection.device_serial:
-                device = frida.get_device(state_connection.device_serial)
-                print('Using USB device `{n}`'.format(n=device.name))
-
-                return device
-
-            else:
-                device = frida.get_usb_device(5)
-                print('Using USB device `{n}`'.format(n=device.name))
-
-                return device
-
-        if state_connection.get_comms_type() == state_connection.TYPE_REMOTE:
-            device = frida.get_device_manager().add_remote_device('{host}:{port}'.format(
-                host=state_connection.host, port=state_connection.port))
-            print('Using networked device @`{n}`'.format(n=device.name))
-
-            return device
-
-        raise Exception('Failed to find a device to attach to!')
-
     def get_session(self) -> frida.core.Session:
         if self.session:
             return self.session
@@ -108,15 +92,15 @@ class Agent(object):
         self.device = self._get_device()
         try:
             print('Attempting to attach to process: `{process}`'.format(
-                process=state_connection.gadget_name))
-            self.session = self.device.attach(state_connection.gadget_name)
+                process=package_name))
+            self.session = self.device.attach(package_name)
             self.resumed = True
             self.session.on('detached', self.on_detach)
             return self.session
         except frida.ProcessNotFoundError:
             print('Unable to find process: `{process}`, attempting spawn'.format(
-                process=state_connection.gadget_name))
-        self.spawned_pid = self.device.spawn(state_connection.gadget_name)
+                process=package_name))
+        self.spawned_pid = self.device.spawn(package_name)
         print('PID `{pid}` spawned, attaching...'.format(pid=self.spawned_pid))
         print('Resuming PID test `{pid}`'.format(pid=self.spawned_pid))
         self.device.resume(self.spawned_pid)
@@ -124,12 +108,12 @@ class Agent(object):
         return self.session
 
     def _get_agent_source(self) -> str:
-        if not os.path.exists(self.agent_path):
+        if not os.path.exists(agent_path):
             raise Exception('Unable to locate Objection agent sources at: {location}. '
                             'If this is a development install, check the wiki for more '
-                            'information on building the agent.'.format(location=self.agent_path))
-
-        with open(self.agent_path, 'r', encoding='utf-8') as f:
+                            'information on building the agent.'.format(location=agent_path))
+        print('Agent path is: {path}'.format(path=agent_path))
+        with open(agent_path, 'r', encoding='utf-8') as f:
             agent = f.readlines()
 
         return ''.join([str(x) for x in agent])
@@ -161,46 +145,7 @@ class Agent(object):
             self.script.unload()
             session.detach()
 
-    # def loader(self):
 
-    def exports(self) -> frida.core.ScriptExports:
-        """
-            Get the exports of the agent.
-
-            :return:
-        """
-
-        return self.script.exports()
-
-    def background(self, source: str):
-        """
-            Executes an artibrary Frida script in the background, using the
-            default on_message handler for incoming messages from the script.
-
-            :param source:
-            :return:
-        """
-
-        print('Loading a background script')
-
-        session = self.get_session()
-        script = session.create_script(source=source)
-        script.on('message', self.on_message)
-        script.load()
-
-        if not self.resumed:
-            print('Resuming PID `{pid}`'.format(pid=self.spawned_pid))
-            self.device.resume(self.spawned_pid)
-
-        print('Background script loaded')
-
-    def unload(self) -> None:
-        """
-            Run cleanup routines on an agent.
-
-            :return:
-        """
-
-        if self.script:
-            print('Calling unload()')
-            self.script.unload()
+if __name__ == "__main__":
+    t = TiktokFeed()
+    t.inject()

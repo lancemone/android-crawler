@@ -10,6 +10,7 @@
 """
 __author__ = 'motao'
 
+import sys
 import time
 
 import frida
@@ -24,11 +25,12 @@ def tiktok_run():
     if serial:
         state_connection.device_serial = serial
     explore()
-    while True:
-        time.sleep(5)
-        print("invoke getVideoUrl")
-        # print(state_connection.get_api().tiktok_aweme())
-        print(state_connection.get_api().getVideoUrl)
+    sys.stdin.read()
+    # while True:
+    #     time.sleep(5)
+        # print("invoke getVideoUrl")
+        # print(state_connection.get_api().tiktok_feed_aweme())
+        # print(state_connection.get_api().getVideoUrl)
 
 
 def explore():
