@@ -5,7 +5,9 @@ export const changeCarrierRegion = function () {
     const clazz: string = "com.ss.android.ugc.aweme.ak.d";
     if (Java.available) {
         Java.perform(() => {
-            // let serial = deviceSerial()
+            console.log("deviceSerial")
+            let serial = deviceSerial()
+            console.log(serial)
             const carrierRegion = Java.use(clazz);
             carrierRegion.i.implementation = function (){
                 // let region: Array<any> | undefined = serialToRegion.get("default")

@@ -35,6 +35,7 @@ class TiktokFeed(object):
     def _get_device() -> frida.core.Device:
         if device_serial:
             device = frida.get_device(device_serial)
+            frida.get_device_manager()
             print('Using USB device `{n}`'.format(n=device.name))
             return device
 
