@@ -15,29 +15,41 @@ import os
 import sys
 
 import frida
+from typing import Dict, List
 
 package_name = "com.ss.android.ugc.trill"
 device_serial = "FA79Y1A01745"
 agent_path = os.path.join(
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), "js"),
-            "agent.js")
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "js"),
+    "agent.js")
 
 
 class TiktokFeed(object):
     def __init__(self):
-        self.session = None
+        self._sessions: Dict[str, frida.core.Session] = {}
         self.script = None
-        self.device = None
+        self._devices: Dict[str, frida.core.Device] = {}
         self.spawned_pid = None
         self.resumed = False
+        self._device_ids: list = []
+        self._tiktok_swipe = []
+        self.app = None
 
     @staticmethod
     def _get_device() -> frida.core.Device:
         if device_serial:
             device = frida.get_device(device_serial)
-            frida.get_device_manager()
             print('Using USB device `{n}`'.format(n=device.name))
             return device
+
+    @staticmethod
+    def _get_devices_usb() -> Dict[str, frida.core.Device]:
+        usb_devices = {}
+        if frida.enumerate_devices():
+            for device in frida.enumerate_devices():
+                if device.type == "usb":
+                    usb_devices[device.id] = device
+        return usb_devices
 
     @staticmethod
     def on_message(message: dict, data):
@@ -86,29 +98,52 @@ class TiktokFeed(object):
             print('Failed to process an incoming message for a session detach signal: {0}'.format(e))
             raise e
 
-    def get_session(self) -> frida.core.Session:
-        if self.session:
-            return self.session
+    @property
+    def get_devices_usb(self) -> Dict[str, frida.core.Device]:
+        if not self._devices:
+            self._devices = self._get_devices_usb()
+        return self._devices
 
-        self.device = self._get_device()
+    @property
+    def get_devices_ids(self) -> List[str]:
+        if not self._device_ids:
+            self._device_ids = self.get_devices_usb.keys()
+        return self._device_ids
+
+    @property
+    def get_sessions(self) -> Dict[str, frida.core.Session]:
+        """
+
+        :rtype: object
+        """
+        if self._sessions:
+            return self._sessions
+        device_usb = self.get_devices_usb
+        for did in device_usb.keys():
+            session = self._get_session(device_usb.get(did))
+            self._sessions[did] = session
+        return self._sessions
+
+    def _get_session(self, device: frida.core.Device) -> frida.core.Session:
         try:
-            print('Attempting to attach to process: `{process}`'.format(
-                process=package_name))
-            self.session = self.device.attach(package_name)
+            print('Attempting to attach to process: `{process}` on `{did}'.format(
+                process=package_name, did=device.id))
+            session = device.attach(package_name)
             self.resumed = True
-            self.session.on('detached', self.on_detach)
-            return self.session
+            session.on('detached', self.on_detach)
+            return session
         except frida.ProcessNotFoundError:
-            print('Unable to find process: `{process}`, attempting spawn'.format(
-                process=package_name))
-        self.spawned_pid = self.device.spawn(package_name)
-        print('PID `{pid}` spawned, attaching...'.format(pid=self.spawned_pid))
+            print('Unable to find process: `{process}` on `{did}`, attempting spawn'.format(
+                did=device.id, process=package_name))
+        spawned_pid = device.spawn(package_name)
+        print('Device `{did}` PID `{pid}` spawned, attaching...'.format(did=device.id, pid=self.spawned_pid))
         print('Resuming PID test `{pid}`'.format(pid=self.spawned_pid))
-        self.device.resume(self.spawned_pid)
-        self.session = self.device.attach(self.spawned_pid)
-        return self.session
+        device.resume(spawned_pid)
+        session = device.attach(spawned_pid)
+        return session
 
-    def _get_agent_source(self) -> str:
+    @staticmethod
+    def _get_agent_source() -> str:
         if not os.path.exists(agent_path):
             raise Exception('Unable to locate Objection agent sources at: {location}. '
                             'If this is a development install, check the wiki for more '
@@ -124,29 +159,36 @@ class TiktokFeed(object):
         Injects the Objection Agent.
         :return:
         """
-        print('Injecting agent...')
-        session = self.get_session()
-        self.script = session.create_script(source=self._get_agent_source())
-        self.script.on('message', self.on_message)
-        self.script.load()
-        # if not self.exports().ping():
-        #     print('Failed to ping the agent')
-        #     raise Exception('Failed to communicate with agent')
-        # print('Agent injected and responds ok!')
-        # return self
+        sessions = self.get_sessions
+        for did in sessions.keys():
+            print(f'`${did}` Injecting agent...')
+            session = sessions.get(did)
+            script = session.create_script(source=self._get_agent_source())
+            script.on('message', self.on_message)
+            script.load()
+        sys.stdin.read()
         try:
-            while True:
-                if sys.stdin.read().strip() == "stop":
-                    print("error")
-                    self.script.unload()
-                    session.detach()
-                    break
+            while not self.app.is_end():
+                sys.stdin.read()
+            self.stop()
         except Exception as e:
-            print(str(e))
-            self.script.unload()
-            session.detach()
+            raise e
+
+    def stop(self):
+        if self._sessions:
+            for session in self._sessions.values():
+                session.detach()
+        if self._devices:
+            for did in self._devices:
+                device = self._devices.get(did)
+                device.kill()
+
+    def set_app(self, app):
+        self.app = app
+
+
+tiktok_feed = TiktokFeed()
 
 
 if __name__ == "__main__":
-    t = TiktokFeed()
-    t.inject()
+    tiktok_feed.inject()

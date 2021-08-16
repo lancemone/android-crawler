@@ -1,38 +1,38 @@
 export namespace android {
     export const deviceSerial = (): String => {
-        //android的hidden API，需要通过反射调用
-        // const SP = Java.use("android.os.SystemProperties");
         let tmp: String = "";
         if (Java.available) {
             Java.perform(() => {
-                console.log("Build.SERIAL");
-                const SystemProperties = Java.use("com.ss.android.deviceregister.DeviceRegisterManager")
-                SystemProperties.getDeviceId.implementation = function (){
-                    tmp = this.getDeviceId();
-                    console.log(tmp)
-                    return tmp;
-                }
-                // Java.choose("com.bytedance.android.live.core.h.ad", {
-                //     onComplete: function (){},
-                //     onMatch: function (instance) {
-                //         tmp = instance.a("ro.serialno");
-                //         console.log("live.core.h.ad");
-                //         console.log(tmp)
-                //     }
-                // })
+                Java.choose("com.ss.android.deviceregister.DeviceRegisterManager",{
+                    onComplete: function (){},
+                    onMatch:function (instance) {
+                        tmp = instance.getDeviceId();
+                    }
+                })
             })
         }
         return tmp;
-        // SP.get.overload('java.lang.String').implementation = function (p1: any) {
-        //     tmp = this.get(p1);
-        //     console.log("[*]" + p1 + " : " + tmp);
-        // }
-        // SP.get.overload('java.lang.String', 'java.lang.String').implementation = function (p1: any, p2:any) {
-        //
-        //     tmp = this.get(p1, p2)
-        //     console.log("[*]" + p1 + "," + p2 + " : " + tmp);
-        // }
-    }
-}
+    };
 
-setImmediate(android.deviceSerial)
+    export const getApplicationContext = (): any => {
+        const ActivityThread = Java.use("android.app.ActivityThread");
+        const currentApplication = ActivityThread.currentApplication();
+        return currentApplication.getApplicationContext();
+    };
+
+    export const deviceIdToSerial = new Map<String, String>([
+        ["6993301494053717506", "FA79Y1A01745"],
+        ["", "HT7BF1A01506"]
+    ])
+
+    // 设备和国家的对应关系
+    export const deviceIdToRegion = new Map<String, String>([
+        ["6993301494053717506", "CI"],
+        ["FA79Y1A01743", "GH"],
+    ])
+
+    export const deviceIdToMcc = new Map<String, Number>([
+        ["6993301494053717506", 612],
+        ["FA79Y1A01743", 613]
+    ])
+}

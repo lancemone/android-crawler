@@ -1,3 +1,4 @@
+import {android} from "../android/android";
 
 export const tiktokFeedAweme = function (){
     const clazz: string = "com.ss.android.ugc.aweme.feed.model.Aweme";
@@ -5,6 +6,11 @@ export const tiktokFeedAweme = function (){
         Java.perform(() => {
             const targetClass = Java.use(clazz);
             const throwable = Java.use("java.lang.Throwable");
+            const deviceId = android.deviceSerial()
+            let serial: String | undefined = ''
+            if (android.deviceIdToSerial.has(deviceId)) {
+                serial = android.deviceIdToSerial.get(deviceId)
+            }
             try {
                 targetClass.isAd.implementation = function () {
                     const author = this.getAuthor();
@@ -38,21 +44,30 @@ export const tiktokFeedAweme = function (){
                     tiktokAwemeObject.desc_language = this.getDescLanguage();
                     tiktokAwemeObject.awemeType = this.getAwemeType();
                     message.aweme_list.push(tiktokAwemeObject)
+                    if (serial != null) {
+                        message.device = serial;
+                    }
                     send(JSON.stringify(message));
                     return this.isAd();
                 }
             }catch (e) {
                 message.status_code = 10000;
-                send("error: " + e.toString())
+                if (serial != null) {
+                    message.device = serial;
+                }
+                message.msg = e.toString();
+                send(JSON.stringify(message))
             }
         })
     }
 }
 
-type response = {status_code: number, aweme_list: Array<Object>};
+type response = {device: String, status_code: number, aweme_list: Array<Object>, msg: String};
 const message: response = {
+    device: "",
     status_code: 0,
-    aweme_list: []
+    aweme_list: [],
+    msg: ""
 }
 
 // @ts-ignore
