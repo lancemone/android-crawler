@@ -48,7 +48,7 @@ class TiktokSwipeFeed(threading.Thread):
                         if adl:
                             adl_text = adl.text
                         if adl_text != self.last_adl:  # 存在一种情况是连续两屏都没有获取到adl，会导致少一次有效计数
-                            time.sleep(random.randint(5, 15))
+                            time.sleep(random.randint(2, 10))
                             self.last_adl = adl_text
                             self.device.xpath(xpath=config.tiktok_xpath_video_list_scrollable).swipe('up')
                             self.swipe_count += 1
