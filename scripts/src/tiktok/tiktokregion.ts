@@ -1,11 +1,11 @@
 import {android} from "../android/android";
 import deviceSerial = android.deviceSerial;
-import androidVersion = Java.androidVersion;
 
 export const changeCarrierRegion = function () {
     const clazz: string = "com.ss.android.ugc.aweme.ak.d";
     if (Java.available) {
         const serial = deviceSerial()
+        console.log(serial)
         Java.perform(() => {
             const carrierRegion = Java.use(clazz);
             carrierRegion.i.implementation = function (){

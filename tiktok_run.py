@@ -10,43 +10,56 @@
 """
 __author__ = 'motao'
 
-import time
+import datetime
+
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 from demo.tiktok import tiktok_feed
 from demo import tiktok_swipe
 import multiprocessing
-from multiprocessing.managers import BaseManager
+import utils
+from utils import my_config
+import uploader
+
+
+def main():
+    scheduler = BlockingScheduler()
+    scheduler.add_job(func=tiktok_run, trigger='interval', hours=5,
+                      name="tiktok_following_feed_task",
+                      next_run_time=datetime.datetime.now())
+    scheduler.start()
 
 
 def tiktok_run():
-    manager = BaseManager()
-    manager.register("App", App)
-    manager.start()
-    app = manager.App()
-    process_list = []
-    hooking_process = multiprocessing.Process(target=hooking_tiktok, args=(app,))
+    utils.write_task_number_same_day(my_config.CrawlerSort.TT_FOR_YOU)
+    is_end = multiprocessing.Value('d', 0)
+    hooking_process = multiprocessing.Process(target=hooking_tiktok, args=(is_end,))
     hooking_process.start()
-    swipe_process = multiprocessing.Process(target=tiktok_feed_swipe, args=(tiktok_feed.get_devices_ids, app,))
+    swipe_process = multiprocessing.Process(target=tiktok_feed_swipe, args=(tiktok_feed.get_devices_ids, is_end,))
     swipe_process.start()
     swipe_process.join()
     hooking_process.join()
+    print(uploader.tiktok_for_you_uploader.get_hash_code_length())
 
 
-def hooking_tiktok(app):
-    tiktok_feed.inject()
+def hooking_tiktok(is_end):
+    # tiktok_feed.set_is_end(is_end)
+    tiktok_feed.inject(is_end=is_end)
 
 
-def tiktok_feed_swipe(devices, app):
+def tiktok_feed_swipe(devices, is_end):
     thread_list = []
+    # devices = ['FA79Y1A01745', 'HT7BF1A01506']
     if devices:
         for did in devices:
+            print(did)
             t = tiktok_swipe.TiktokSwipeFeed(serial=did, following=False)
             thread_list.append(t)
     for t in thread_list:
         t.start()
     for t in thread_list:
         t.join()
-    app.set_end()
+    is_end.value = 1
 
 
 class App(object):
@@ -61,4 +74,4 @@ class App(object):
 
 
 if __name__ == "__main__":
-    tiktok_run()
+   main()

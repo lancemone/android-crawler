@@ -16,6 +16,7 @@ import sys
 
 import frida
 from typing import Dict, List
+from uploader import tiktok_for_you_uploader
 
 package_name = "com.ss.android.ugc.trill"
 device_serial = "FA79Y1A01745"
@@ -26,6 +27,7 @@ agent_path = os.path.join(
 
 class TiktokFeed(object):
     def __init__(self):
+        # self.is_end:
         self._sessions: Dict[str, frida.core.Session] = {}
         self.script = None
         self._devices: Dict[str, frida.core.Device] = {}
@@ -33,7 +35,7 @@ class TiktokFeed(object):
         self.resumed = False
         self._device_ids: list = []
         self._tiktok_swipe = []
-        self.app = None
+        self.is_end: int
 
     @staticmethod
     def _get_device() -> frida.core.Device:
@@ -48,6 +50,7 @@ class TiktokFeed(object):
         if frida.enumerate_devices():
             for device in frida.enumerate_devices():
                 if device.type == "usb":
+                    print(device)
                     usb_devices[device.id] = device
         return usb_devices
 
@@ -55,6 +58,7 @@ class TiktokFeed(object):
     def on_message(message: dict, data):
         print(str(message))
         payload: str = ''
+        swipe_num = 0
         try:
             if message and 'payload' in message:
                 if len(message['payload']) > 0:
@@ -65,6 +69,8 @@ class TiktokFeed(object):
                     else:
                         print(type(message['payload']))
                         payload = str(message['payload'])
+                    swipe_num += 1
+                    tiktok_for_you_uploader.uploader_from_json(swipe_num=str(swipe_num), value=payload)
         except Exception as e:
             raise e
 
@@ -107,7 +113,7 @@ class TiktokFeed(object):
     @property
     def get_devices_ids(self) -> List[str]:
         if not self._device_ids:
-            self._device_ids = self.get_devices_usb.keys()
+            self._device_ids = list(self.get_devices_usb.keys())
         return self._device_ids
 
     @property
@@ -118,28 +124,29 @@ class TiktokFeed(object):
         """
         if self._sessions:
             return self._sessions
-        device_usb = self.get_devices_usb
-        for did in device_usb.keys():
-            session = self._get_session(device_usb.get(did))
+        device_usb = self.get_devices_ids
+        for did in device_usb:
+            session = self._get_session(did)
+            session.disable_debugger()
             self._sessions[did] = session
         return self._sessions
 
-    def _get_session(self, device: frida.core.Device) -> frida.core.Session:
+    def _get_session(self, device: str) -> frida.core.Session:
         try:
             print('Attempting to attach to process: `{process}` on `{did}'.format(
-                process=package_name, did=device.id))
-            session = device.attach(package_name)
+                process=package_name, did=device))
+            session = frida.get_device(device).attach(package_name)
             self.resumed = True
             session.on('detached', self.on_detach)
             return session
         except frida.ProcessNotFoundError:
             print('Unable to find process: `{process}` on `{did}`, attempting spawn'.format(
-                did=device.id, process=package_name))
-        spawned_pid = device.spawn(package_name)
-        print('Device `{did}` PID `{pid}` spawned, attaching...'.format(did=device.id, pid=self.spawned_pid))
-        print('Resuming PID test `{pid}`'.format(pid=self.spawned_pid))
-        device.resume(spawned_pid)
-        session = device.attach(spawned_pid)
+                did=device, process=package_name))
+        spawned_pid = frida.get_device(device).spawn(package_name)
+        print('Device `{did}` PID `{pid}` spawned, attaching...'.format(did=device, pid=spawned_pid))
+        print('Resuming PID test `{pid}`'.format(pid=spawned_pid))
+        frida.get_device(device).resume(spawned_pid)
+        session = frida.get_device(device).attach(spawned_pid)
         return session
 
     @staticmethod
@@ -154,7 +161,7 @@ class TiktokFeed(object):
 
         return ''.join([str(x) for x in agent])
 
-    def inject(self):
+    def inject(self, is_end):
         """
         Injects the Objection Agent.
         :return:
@@ -166,9 +173,8 @@ class TiktokFeed(object):
             script = session.create_script(source=self._get_agent_source())
             script.on('message', self.on_message)
             script.load()
-        sys.stdin.read()
         try:
-            while not self.app.is_end():
+            while is_end.value == 0:
                 sys.stdin.read()
             self.stop()
         except Exception as e:
@@ -179,16 +185,17 @@ class TiktokFeed(object):
             for session in self._sessions.values():
                 session.detach()
         if self._devices:
-            for did in self._devices:
-                device = self._devices.get(did)
-                device.kill()
+            print('end')
+            # for did in self._devices:
+            #     device = self._devices.get(did)
+            #     device.kill(device.get_process(package_name))
 
-    def set_app(self, app):
-        self.app = app
+    def set_is_end(self, is_end):
+        pass
 
 
 tiktok_feed = TiktokFeed()
 
 
-if __name__ == "__main__":
-    tiktok_feed.inject()
+# if __name__ == "__main__":
+#     tiktok_feed.inject()
