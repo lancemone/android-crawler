@@ -27,7 +27,7 @@ tiktok_xpath_home_following_tab = '//android.widget.HorizontalScrollView/android
 tiktok_xpath_home_for_you_tab = '//android.widget.HorizontalScrollView/android.widget.LinearLayout[1]' \
                                 '/androidx.appcompat.app.ActionBar-b[2]'
 tiktok_xpath_home_play_layout = ''
-tiktok_xpath_home_refresh = ''
+tiktok_xpath_home_no_network = '//*[@resource-id="com.ss.android.ugc.trill:id/dy5"]'
 tiktok_xpath_home_adl = '//*[@resource-id="com.ss.android.ugc.trill:id/acu"]'
 tiktok_xpath_video_like = ''
 

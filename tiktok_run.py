@@ -33,13 +33,13 @@ def main():
 def tiktok_run():
     utils.write_task_number_same_day(my_config.CrawlerSort.TT_FOR_YOU)
     is_end = multiprocessing.Value('d', 0)
-    hooking_process = multiprocessing.Process(target=hooking_tiktok, args=(is_end,))
-    hooking_process.start()
     swipe_process = multiprocessing.Process(target=tiktok_feed_swipe, args=(tiktok_feed.get_devices_ids, is_end,))
     swipe_process.start()
+    hooking_process = multiprocessing.Process(target=hooking_tiktok, args=(is_end,))
+    hooking_process.start()
     swipe_process.join()
     hooking_process.join()
-    print(uploader.tiktok_for_you_uploader.get_hash_code_length())
+    tiktok_swipe.TiktokSwipeFeed()
 
 
 def hooking_tiktok(is_end):

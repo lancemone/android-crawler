@@ -18,13 +18,14 @@ class TiktokSwipeFeed(threading.Thread):
         self.swipe_count = 0
         self.last_adl = ''  # 上一页adl元素的文本
         self.swiped_num = 0  # app有效滑动次数
-        self.log_path = 'D:\\Code\\Python\\{}-{}.log'\
+        self.log_path = 'D:\\Code\\Python\\log\\{}-{}.log'\
             .format(serial, utils.read_task_number_same_day(config.CrawlerSort.TT_FOR_YOU))
 
     def run(self):
         app_current = self.device.app_current
         if self.device:
             self.device.implicitly_wait(config.tiktok_element_min_wait_time)
+            # self.device.app_stop_all()
             start_time = datetime.now()
             utils.crawler_print(self.log_path, str(start_time))
             self.start_app(start_time)
@@ -33,8 +34,8 @@ class TiktokSwipeFeed(threading.Thread):
         adl_text = '0'  # 默认为0为了防止首屏内容获取不到adl元素
         try:
             running_time = 0
-            # self.device.app_wait(config.tiktok_package_name, timeout=200, front=True)
-            # self.device.xpath(xpath=config.tiktok_xpath_home_for_you_tab).click_exists()
+            self.device.app_wait(config.tiktok_package_name, timeout=200, front=True)
+            self.device.xpath(xpath=config.tiktok_xpath_home_for_you_tab).click_exists()
             # 3600 * config.tiktok_for_you_max_running_time
             while True:
                 if running_time < 3600 * config.tiktok_for_you_max_running_time:
@@ -55,10 +56,14 @@ class TiktokSwipeFeed(threading.Thread):
                             self.swiped_num += 1
                         else:
                             utils.crawler_print(self.log_path, self.device.serial + ' not a effective swipe')
-                            self.device.xpath(xpath=config.tiktok_xpath_video_list_scrollable).swipe('up')
+                            if self.device.xpath(xpath=config.tiktok_xpath_video_list_scrollable):
+                                self.device.xpath(xpath=config.tiktok_xpath_video_list_scrollable).swipe('up')
+                            else:
+                                self.device.xpath(xpath=config.tiktok_xpath_home_for_you_tab).click_exists()
                             self.swipe_count += 1
                     else:
                         utils.crawler_print(self.log_path, 'not find title')
+                        self.device.xpath(xpath=config.tiktok_xpath_home_for_you_tab).click_exists()
                 else:
                     utils.crawler_print(self.log_path, 'over time')
                     break

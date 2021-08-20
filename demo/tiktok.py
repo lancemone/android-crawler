@@ -135,6 +135,7 @@ class TiktokFeed(object):
         try:
             print('Attempting to attach to process: `{process}` on `{did}'.format(
                 process=package_name, did=device))
+            frida.get_device(device)
             session = frida.get_device(device).attach(package_name)
             self.resumed = True
             session.on('detached', self.on_detach)

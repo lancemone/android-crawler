@@ -75,7 +75,7 @@ def read_task_number_same_day(sort) -> str:
             platform_data = json_value[sort]
             num = platform_data["num"]
             local_date = platform_data["date"]
-            return "{0}-{1}-{2}".format(local_date, num, sort)
+            return "{0}-{1}-{2}-new".format(local_date, num, sort)
     except Exception as e:
         print(str(e))
         return ''

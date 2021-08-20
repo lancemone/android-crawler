@@ -48,7 +48,7 @@ def get_only_count(file_path):
 
 
 if __name__ == '__main__':
-    file_name = r'D:\Code\Python\request.log'
+    file_name = r'D:\Code\Python\2021-08-19-3-tfy-new-request.log'
     print(get_count_by_device(file_name))
     print(get_only_count_by_device(file_name))
     print(get_only_count(file_name))
